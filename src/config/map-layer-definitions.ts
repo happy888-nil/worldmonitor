@@ -110,6 +110,12 @@ const VARIANT_LAYER_ORDER: Record<MapVariant, Array<keyof MapLayers>> = {
   ],
 };
 
+const SVG_ONLY_LAYERS: Partial<Record<MapVariant, Array<keyof MapLayers>>> = {
+  full: ['sanctions'],
+  finance: ['sanctions'],
+  commodity: ['sanctions'],
+};
+
 const I18N_PREFIX = 'components.deckgl.layers.';
 
 export function getLayersForVariant(variant: MapVariant, renderer: MapRenderer): LayerDefinition[] {
@@ -120,7 +126,9 @@ export function getLayersForVariant(variant: MapVariant, renderer: MapRenderer):
 }
 
 export function getAllowedLayerKeys(variant: MapVariant): Set<keyof MapLayers> {
-  return new Set(VARIANT_LAYER_ORDER[variant] ?? VARIANT_LAYER_ORDER.full);
+  const keys = new Set(VARIANT_LAYER_ORDER[variant] ?? VARIANT_LAYER_ORDER.full);
+  for (const k of SVG_ONLY_LAYERS[variant] ?? []) keys.add(k);
+  return keys;
 }
 
 export function sanitizeLayersForVariant(layers: MapLayers, variant: MapVariant): MapLayers {

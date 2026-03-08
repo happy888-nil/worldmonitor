@@ -1,8 +1,8 @@
 /**
  * Guardrail: every layer enabled by default in a variant's MapLayers
- * MUST have a corresponding entry in VARIANT_LAYER_ORDER so users can toggle it,
- * AND that layer's renderers must include at least one of ['flat', 'globe']
- * so getLayersForVariant() actually returns it.
+ * MUST be in VARIANT_LAYER_ORDER (DeckGL/Globe toggle) or SVG_ONLY_LAYERS
+ * (SVG fallback toggle). Layers in VARIANT_LAYER_ORDER must have at least
+ * one DeckGL/Globe renderer so getLayersForVariant() returns them.
  *
  * Without this, layers render but have no UI toggle → users can't turn them off.
  */
@@ -15,9 +15,10 @@ const SRC = new URL('../src/config/', import.meta.url);
 const layerDefsSource = readFileSync(new URL('map-layer-definitions.ts', SRC), 'utf8');
 const panelsSource = readFileSync(new URL('panels.ts', SRC), 'utf8');
 
-function extractVariantLayerOrder(source) {
-  const match = source.match(/VARIANT_LAYER_ORDER[^=]*=\s*\{([\s\S]*?)\n\};/);
-  if (!match) throw new Error('Could not find VARIANT_LAYER_ORDER');
+function extractRecordBlock(source, name) {
+  const re = new RegExp(`(?:const|export const)\\s+${name}[^=]*=\\s*\\{([\\s\\S]*?)\\n\\};`);
+  const match = source.match(re);
+  if (!match) return null;
   const body = match[1];
   const result = {};
   const variantRe = /(\w+):\s*\[([\s\S]*?)\]/g;
@@ -63,8 +64,15 @@ function extractEnabledLayers(source, constName) {
   return enabled;
 }
 
-const variantOrder = extractVariantLayerOrder(layerDefsSource);
+const variantOrder = extractRecordBlock(layerDefsSource, 'VARIANT_LAYER_ORDER');
+const svgOnlyLayers = extractRecordBlock(layerDefsSource, 'SVG_ONLY_LAYERS') ?? {};
 const layerRenderers = extractLayerRenderers(layerDefsSource);
+
+function getAllowedForVariant(variant) {
+  const allowed = new Set(variantOrder[variant] ?? []);
+  for (const k of svgOnlyLayers[variant] ?? []) allowed.add(k);
+  return allowed;
+}
 
 const VARIANT_DEFAULTS = {
   full:      { desktop: 'FULL_MAP_LAYERS',      mobile: 'FULL_MOBILE_MAP_LAYERS' },
@@ -76,15 +84,15 @@ const VARIANT_DEFAULTS = {
 
 describe('variant layer guardrail', () => {
   for (const [variant, { desktop, mobile }] of Object.entries(VARIANT_DEFAULTS)) {
-    const allowed = variantOrder[variant];
-    if (!allowed) continue;
+    const allowed = getAllowedForVariant(variant);
+    if (allowed.size === 0) continue;
 
     it(`${variant} desktop: no enabled layer without a toggle`, () => {
       const enabled = extractEnabledLayers(panelsSource, desktop);
       const orphans = enabled.filter(k => !allowed.has(k));
       assert.deepStrictEqual(
         orphans, [],
-        `${variant} desktop has layers enabled but NOT in VARIANT_LAYER_ORDER (no toggle to turn off): ${orphans.join(', ')}`,
+        `${variant} desktop has layers enabled but NOT in VARIANT_LAYER_ORDER or SVG_ONLY_LAYERS (no toggle): ${orphans.join(', ')}`,
       );
     });
 
@@ -93,12 +101,12 @@ describe('variant layer guardrail', () => {
       const orphans = enabled.filter(k => !allowed.has(k));
       assert.deepStrictEqual(
         orphans, [],
-        `${variant} mobile has layers enabled but NOT in VARIANT_LAYER_ORDER (no toggle to turn off): ${orphans.join(', ')}`,
+        `${variant} mobile has layers enabled but NOT in VARIANT_LAYER_ORDER or SVG_ONLY_LAYERS (no toggle): ${orphans.join(', ')}`,
       );
     });
   }
 
-  it('every layer in VARIANT_LAYER_ORDER has at least one renderer', () => {
+  it('every layer in VARIANT_LAYER_ORDER has at least one DeckGL/Globe renderer', () => {
     const noRenderer = [];
     for (const [variant, keys] of Object.entries(variantOrder)) {
       for (const key of keys) {
@@ -110,7 +118,7 @@ describe('variant layer guardrail', () => {
     }
     assert.deepStrictEqual(
       noRenderer, [],
-      `Layers in VARIANT_LAYER_ORDER with empty renderers (getLayersForVariant will filter them out → no toggle): ${noRenderer.join(', ')}`,
+      `Layers in VARIANT_LAYER_ORDER with empty renderers (getLayersForVariant filters them out → no toggle): ${noRenderer.join(', ')}`,
     );
   });
 });
