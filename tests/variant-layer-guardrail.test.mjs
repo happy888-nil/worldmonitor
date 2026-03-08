@@ -1,6 +1,8 @@
 /**
  * Guardrail: every layer enabled by default in a variant's MapLayers
- * MUST have a corresponding entry in VARIANT_LAYER_ORDER so users can toggle it.
+ * MUST have a corresponding entry in VARIANT_LAYER_ORDER so users can toggle it,
+ * AND that layer's renderers must include at least one of ['flat', 'globe']
+ * so getLayersForVariant() actually returns it.
  *
  * Without this, layers render but have no UI toggle → users can't turn them off.
  */
@@ -27,6 +29,27 @@ function extractVariantLayerOrder(source) {
   return result;
 }
 
+function extractLayerRenderers(source) {
+  const result = {};
+  const registryMatch = source.match(/LAYER_REGISTRY[^=]*=\s*\{([\s\S]*?)\n\};/);
+  if (!registryMatch) throw new Error('Could not find LAYER_REGISTRY');
+  const body = registryMatch[1];
+  const defRe = /def\(\s*'(\w+)'[^)]*\)/g;
+  let m;
+  while ((m = defRe.exec(body)) !== null) {
+    const key = m[1];
+    const fullCall = m[0];
+    const renderersMatch = fullCall.match(/\[([^\]]*)\]\s*(?:,\s*(?:'[^']*'|undefined))?\s*\)/);
+    if (renderersMatch) {
+      const renderers = renderersMatch[1].match(/'(\w+)'/g)?.map(s => s.replace(/'/g, '')) ?? [];
+      result[key] = renderers;
+    } else {
+      result[key] = ['flat', 'globe'];
+    }
+  }
+  return result;
+}
+
 function extractEnabledLayers(source, constName) {
   const re = new RegExp(`const ${constName}[^=]*=\\s*\\{([\\s\\S]*?)\\};`);
   const match = source.match(re);
@@ -41,6 +64,7 @@ function extractEnabledLayers(source, constName) {
 }
 
 const variantOrder = extractVariantLayerOrder(layerDefsSource);
+const layerRenderers = extractLayerRenderers(layerDefsSource);
 
 const VARIANT_DEFAULTS = {
   full:      { desktop: 'FULL_MAP_LAYERS',      mobile: 'FULL_MOBILE_MAP_LAYERS' },
@@ -73,4 +97,20 @@ describe('variant layer guardrail', () => {
       );
     });
   }
+
+  it('every layer in VARIANT_LAYER_ORDER has at least one renderer', () => {
+    const noRenderer = [];
+    for (const [variant, keys] of Object.entries(variantOrder)) {
+      for (const key of keys) {
+        const renderers = layerRenderers[key];
+        if (!renderers || renderers.length === 0) {
+          noRenderer.push(`${variant}:${key}`);
+        }
+      }
+    }
+    assert.deepStrictEqual(
+      noRenderer, [],
+      `Layers in VARIANT_LAYER_ORDER with empty renderers (getLayersForVariant will filter them out → no toggle): ${noRenderer.join(', ')}`,
+    );
+  });
 });

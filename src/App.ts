@@ -187,22 +187,8 @@ export class App {
 
     let initialUrlState: ParsedMapUrlState | null = parseMapUrlState(window.location.search, mapLayers);
     if (initialUrlState.layers) {
-      if (currentVariant === 'tech') {
-        const geoLayers: (keyof MapLayers)[] = ['conflicts', 'bases', 'hotspots', 'nuclear', 'irradiators', 'sanctions', 'military', 'protests', 'pipelines', 'waterways', 'ais', 'flights', 'spaceports', 'minerals'];
-        const urlLayers = initialUrlState.layers;
-        geoLayers.forEach(layer => {
-          urlLayers[layer] = false;
-        });
-      }
-      // For happy variant, force off all non-happy layers (including natural events)
-      if (currentVariant === 'happy') {
-        const unhappyLayers: (keyof MapLayers)[] = ['conflicts', 'bases', 'hotspots', 'nuclear', 'irradiators', 'sanctions', 'military', 'protests', 'pipelines', 'waterways', 'ais', 'flights', 'spaceports', 'minerals', 'natural', 'fires', 'outages', 'cyberThreats', 'weather', 'economic', 'cables', 'datacenters', 'ucdpEvents', 'displacement', 'climate', 'iranAttacks'];
-        const urlLayers = initialUrlState.layers;
-        unhappyLayers.forEach(layer => {
-          urlLayers[layer] = false;
-        });
-      }
-      mapLayers = initialUrlState.layers;
+      mapLayers = sanitizeLayersForVariant(initialUrlState.layers, currentVariant as MapVariant);
+      initialUrlState.layers = mapLayers;
     }
     if (!CYBER_LAYER_ENABLED) {
       mapLayers.cyberThreats = false;
