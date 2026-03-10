@@ -24,7 +24,14 @@ function isRateLimited(ip) {
 
 async function verifyTurnstile(token, ip) {
   const secret = process.env.TURNSTILE_SECRET_KEY;
-  if (!secret) return true;
+  if (!secret) {
+    const isLocal = (process.env.VERCEL_ENV ?? 'development') === 'development';
+    if (!isLocal) {
+      console.error('[contact] TURNSTILE_SECRET_KEY not set in production, rejecting');
+      return false;
+    }
+    return true;
+  }
   try {
     const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
       method: 'POST',
@@ -41,8 +48,8 @@ async function verifyTurnstile(token, ip) {
 async function sendNotificationEmail(name, email, organization, message) {
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) {
-    console.warn('[contact] RESEND_API_KEY not set, skipping notification');
-    return;
+    console.error('[contact] RESEND_API_KEY not set — lead stored in Convex but notification NOT sent');
+    return false;
   }
   const notifyEmail = process.env.CONTACT_NOTIFY_EMAIL || 'sales@worldmonitor.app';
   try {
@@ -72,9 +79,12 @@ async function sendNotificationEmail(name, email, organization, message) {
     if (!res.ok) {
       const body = await res.text();
       console.error(`[contact] Resend ${res.status}:`, body);
+      return false;
     }
+    return true;
   } catch (err) {
     console.error('[contact] Resend error:', err);
+    return false;
   }
 }
 
@@ -187,9 +197,9 @@ export default async function handler(req) {
       source: safeSource,
     });
 
-    await sendNotificationEmail(safeName, email.trim(), safeOrg, safeMsg);
+    const emailSent = await sendNotificationEmail(safeName, email.trim(), safeOrg, safeMsg);
 
-    return new Response(JSON.stringify({ status: 'sent' }), {
+    return new Response(JSON.stringify({ status: 'sent', emailSent }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...cors },
     });
