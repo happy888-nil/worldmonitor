@@ -52,7 +52,7 @@ const COUNTRY_KEYWORDS: Record<string, string[]> = {
   CU: ['cuba', 'havana', 'diaz-canel'],
   MX: ['mexico', 'mexican', 'sheinbaum', 'cartel', 'sinaloa'],
   BR: ['brazil', 'brasilia', 'lula'],
-  AE: ['uae', 'emirates', 'dubai', 'abu dhabi'],
+  AE: ['uae', 'emirates', 'dubai', 'abu dhabi', 'united arab emirates'],
 };
 
 const COUNTRY_BBOX: Record<string, { minLat: number; maxLat: number; minLon: number; maxLon: number }> = {
