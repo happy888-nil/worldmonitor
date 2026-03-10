@@ -188,8 +188,15 @@ export async function searchImagery(
                   const itemDate = new Date(item.properties.datetime);
                   const parts = req.datetime.split('/');
                   const start = new Date(parts[0]!);
-                  const end = parts[1] ? new Date(parts[1]) : start;
+                  const endStr = parts[1] ?? parts[0]!;
+                  const isDateOnly = !endStr.includes('T');
+                  const end = isDateOnly
+                    ? new Date(new Date(endStr).getTime() + 86_400_000 - 1)
+                    : new Date(endStr);
                   if (itemDate < start || itemDate > end) continue;
+                }
+                if (req.source && item.properties.constellation) {
+                  if (item.properties.constellation.toLowerCase() !== req.source.toLowerCase()) continue;
                 }
 
                 allScenes.push(mapStacItem(item));
