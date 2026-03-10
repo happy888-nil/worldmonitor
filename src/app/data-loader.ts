@@ -525,10 +525,8 @@ export class DataLoaderManager implements AppModule {
         case 'iranAttacks':
           await this.loadIranEvents();
           break;
-        case 'satellites':
+        case 'satellites': {
           await this.loadSatellites();
-          break;
-        case 'satelliteImagery': {
           const bbox = this.ctx.map?.getBbox();
           if (bbox) {
             const { fetchImageryScenes } = await import('@/services/imagery');
