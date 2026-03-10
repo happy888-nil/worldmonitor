@@ -1059,6 +1059,8 @@ export class GlobeMap {
       'line-height:1.5',
     ].join(';');
 
+    const closeBtn = `<button style="position:absolute;top:4px;right:4px;background:none;border:none;color:#888;cursor:pointer;font-size:14px;line-height:1;padding:2px 4px;pointer-events:auto;" aria-label="Close">\u00D7</button>`;
+
     const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
     let html = '';
@@ -1204,7 +1206,7 @@ export class GlobeMap {
       const operatorName = SAT_OPERATOR_NAME[d.country] || getCountryNameByCode(d.country) || d.country;
       const overHit = getCountryAtCoordinates(d._lat, d._lng);
       const overLabel = overHit ? overHit.name : 'Ocean';
-      html = `<div style="min-width:220px;">` +
+      html = `<div style="min-width:220px;padding-right:16px;">` + closeBtn +
         `<span style="color:${sc};font-weight:bold;font-size:12px;">${SAT_TYPE_EMOJI[d.type] || '\u{1F6F0}'} ${esc(d.name)}</span>` +
         `<div style="opacity:.5;font-size:10px;margin:2px 0 6px;">NORAD ${esc(d.id)}</div>` +
         `<div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:11px;">` +
@@ -1221,7 +1223,17 @@ export class GlobeMap {
              `<br><span style="opacity:.5;">Res: ${d.resolutionM}m · ${esc(d.mode)}</span>`;
     }
     el.innerHTML = html;
-    if (d._kind === 'satellite') el.style.maxWidth = '300px';
+    if (d._kind === 'satellite') {
+      el.style.maxWidth = '300px';
+      el.style.pointerEvents = 'auto';
+      el.querySelector('button')?.addEventListener('click', () => this.hideTooltip());
+      el.addEventListener('mouseenter', () => {
+        if (this.tooltipHideTimer) { clearTimeout(this.tooltipHideTimer); this.tooltipHideTimer = null; }
+      });
+      el.addEventListener('mouseleave', () => {
+        this.tooltipHideTimer = setTimeout(() => this.hideTooltip(), 2000);
+      });
+    }
 
     this.container.appendChild(el);
 
