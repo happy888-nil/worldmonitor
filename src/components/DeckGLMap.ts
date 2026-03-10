@@ -1958,11 +1958,11 @@ export class DeckGLMap {
     if (cyclones.length === 0) return layers;
 
     // Cone polygons (render first, underneath tracks)
-    const coneData: { polygon: number[][]; stormName: string }[] = [];
+    const coneData: { polygon: number[][]; stormName: string; _event: NaturalEvent }[] = [];
     for (const e of cyclones) {
       if (!e.conePolygon?.length) continue;
       for (const ring of e.conePolygon) {
-        coneData.push({ polygon: ring, stormName: e.stormName || e.title });
+        coneData.push({ polygon: ring, stormName: e.stormName || e.title, _event: e });
       }
     }
     if (coneData.length > 0) {
@@ -1978,7 +1978,7 @@ export class DeckGLMap {
     }
 
     // Past track segments (per-segment wind coloring)
-    const pastSegments: { path: [number, number][]; windKt: number; stormName: string }[] = [];
+    const pastSegments: { path: [number, number][]; windKt: number; stormName: string; _event: NaturalEvent }[] = [];
     for (const e of cyclones) {
       if (!e.pastTrack?.length) continue;
       for (let i = 0; i < e.pastTrack.length - 1; i++) {
@@ -1988,6 +1988,7 @@ export class DeckGLMap {
           path: [[a.lon, a.lat] as [number, number], [b.lon, b.lat] as [number, number]],
           windKt: b.windKt ?? a.windKt ?? 0,
           stormName: e.stormName || e.title,
+          _event: e,
         });
       }
     }
@@ -2004,12 +2005,13 @@ export class DeckGLMap {
     }
 
     // Forecast track
-    const forecastPaths: { path: [number, number][]; stormName: string }[] = [];
+    const forecastPaths: { path: [number, number][]; stormName: string; _event: NaturalEvent }[] = [];
     for (const e of cyclones) {
       if (!e.forecastTrack?.length) continue;
       forecastPaths.push({
         path: [[e.lon, e.lat] as [number, number], ...e.forecastTrack.map(p => [p.lon, p.lat] as [number, number])],
         stormName: e.stormName || e.title,
+        _event: e,
       });
     }
     if (forecastPaths.length > 0) {
@@ -3644,6 +3646,9 @@ export class DeckGLMap {
       'military-flight-clusters-layer': 'militaryFlightCluster',
       'natural-events-layer': 'natEvent',
       'storm-centers-layer': 'natEvent',
+      'storm-forecast-track-layer': 'natEvent',
+      'storm-past-track-layer': 'natEvent',
+      'storm-cone-layer': 'natEvent',
       'waterways-layer': 'waterway',
       'economic-centers-layer': 'economic',
       'stock-exchanges-layer': 'stockExchange',
@@ -3670,8 +3675,8 @@ export class DeckGLMap {
     const popupType = layerToPopupType[layerId];
     if (!popupType) return;
 
-    // For GeoJSON layers, the data is in properties
-    let data = info.object;
+    // For synthetic storm layers, unwrap the backing NaturalEvent
+    let data = info.object?._event ?? info.object;
     if (layerId === 'conflict-zones-layer' && info.object.properties) {
       // Find the full conflict zone data from config
       const conflictId = info.object.properties.id;
