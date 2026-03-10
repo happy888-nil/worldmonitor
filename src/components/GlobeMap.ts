@@ -2138,7 +2138,7 @@ export class GlobeMap {
     this.imageryFootprintPolygons = valid.map(s => {
       const geom = JSON.parse(s.geometryGeojson);
       return {
-        coords: geom.coordinates as number[][][],
+        coords: (geom.coordinates as number[][][]).map((r: number[][]) => [...r].reverse()),
         name: `${s.satellite} ${s.datetime}`,
         _kind: 'imageryFootprint' as const,
         satellite: s.satellite,
