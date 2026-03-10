@@ -805,6 +805,11 @@ export class GlobeMap {
     this.flushPaths();
     this.flushPolygons();
 
+    // Initial imagery fetch if satellites layer is already enabled
+    if (this.layers.satellites) {
+      this.fetchImageryForViewport();
+    }
+
     // Idle rendering: pause animation when nothing is happening
     this.setupVisibilityHandler();
     this.scheduleIdlePause();
@@ -1873,10 +1878,14 @@ export class GlobeMap {
     if (needPolygons) this.flushPolygons();
     if (prev.satellites !== layers.satellites) {
       if (this.satBeamGroup) this.satBeamGroup.visible = !!layers.satellites;
-      if (!layers.satellites) {
+      if (layers.satellites) {
+        this.fetchImageryForViewport();
+      } else {
         if (this.imageryFetchTimer) { clearTimeout(this.imageryFetchTimer); this.imageryFetchTimer = null; }
         this.lastImageryCenter = null;
         this.imageryFetchVersion++;
+        this.imagerySceneMarkers = [];
+        this.imageryFootprintPolygons = [];
       }
     }
   }
