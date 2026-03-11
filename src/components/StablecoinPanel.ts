@@ -32,7 +32,6 @@ export class StablecoinPanel extends Panel {
   private error: string | null = null;
   constructor() {
     super({ id: 'stablecoins', title: t('panels.stablecoins'), showCount: false });
-    void this.fetchData();
   }
 
   public async fetchData(): Promise<void> {
@@ -45,32 +44,16 @@ export class StablecoinPanel extends Panel {
       return;
     }
 
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const client = new MarketServiceClient('', { fetch: (...args) => globalThis.fetch(...args) });
-        this.data = await client.listStablecoinMarkets({ coins: [] });
-        if (!this.element?.isConnected) return;
-        this.error = null;
-
-        if (this.data && !this.data.stablecoins?.length && attempt < 2) {
-          this.showRetrying(undefined, 20);
-          await new Promise(r => setTimeout(r, 20_000));
-          if (!this.element?.isConnected) return;
-          continue;
-        }
-        break;
-      } catch (err) {
-        if (this.isAbortError(err)) return;
-        if (!this.element?.isConnected) return;
-        if (attempt < 2) {
-          this.showRetrying(undefined, 20);
-          await new Promise(r => setTimeout(r, 20_000));
-          if (!this.element?.isConnected) return;
-          continue;
-        }
-        console.warn('[Stablecoin] Fetch error:', err);
-        this.error = null;
-      }
+    try {
+      const client = new MarketServiceClient('', { fetch: (...args) => globalThis.fetch(...args) });
+      this.data = await client.listStablecoinMarkets({ coins: [] });
+      if (!this.element?.isConnected) return;
+      this.error = null;
+    } catch (err) {
+      if (this.isAbortError(err)) return;
+      if (!this.element?.isConnected) return;
+      console.warn('[Stablecoin] Fetch error:', err);
+      this.error = null;
     }
     this.loading = false;
     this.renderPanel();

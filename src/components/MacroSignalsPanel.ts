@@ -127,7 +127,6 @@ export class MacroSignalsPanel extends Panel {
 
   constructor() {
     super({ id: 'macro-signals', title: t('panels.macroSignals'), showCount: false });
-    void this.fetchData();
   }
 
   public async fetchData(): Promise<boolean> {
@@ -141,32 +140,16 @@ export class MacroSignalsPanel extends Panel {
       return true;
     }
 
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const res = await economicClient.getMacroSignals({});
-        if (!this.element?.isConnected) return false;
-        this.data = mapProtoToData(res);
-        this.error = null;
-
-        if (this.data && this.data.unavailable && attempt < 2) {
-          this.showRetrying(undefined, 20);
-          await new Promise(r => setTimeout(r, 20_000));
-          if (!this.element?.isConnected) return false;
-          continue;
-        }
-        break;
-      } catch (err) {
-        if (this.isAbortError(err)) return false;
-        if (!this.element?.isConnected) return false;
-        if (attempt < 2) {
-          this.showRetrying(undefined, 20);
-          await new Promise(r => setTimeout(r, 20_000));
-          if (!this.element?.isConnected) return false;
-          continue;
-        }
-        console.warn('[MacroSignals] Fetch error:', err);
-        this.error = null;
-      }
+    try {
+      const res = await economicClient.getMacroSignals({});
+      if (!this.element?.isConnected) return false;
+      this.data = mapProtoToData(res);
+      this.error = null;
+    } catch (err) {
+      if (this.isAbortError(err)) return false;
+      if (!this.element?.isConnected) return false;
+      console.warn('[MacroSignals] Fetch error:', err);
+      this.error = null;
     }
     this.loading = false;
     this.renderPanel();

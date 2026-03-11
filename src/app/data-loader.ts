@@ -307,7 +307,7 @@ export class DataLoaderManager implements AppModule {
   }
 
   private isPerFeedFallbackEnabled(): boolean {
-    return isFeatureEnabled('newsPerFeedFallback');
+    return isFeatureEnabled('newsPerFeedFallback') && !this.ctx.initialLoadComplete;
   }
 
   private getStaleNewsItems(category: string): NewsItem[] {
@@ -323,6 +323,15 @@ export class DataLoaderManager implements AppModule {
 
   private shouldShowIntelligenceNotifications(): boolean {
     return !this.ctx.isMobile && !!this.ctx.findingsBadge?.isPopupEnabled();
+  }
+
+  private isPanelNearViewport(panelId: string, marginPx = 400): boolean {
+    const panel = this.ctx.panels[panelId] as { isNearViewport?: (marginPx?: number) => boolean } | undefined;
+    return panel?.isNearViewport?.(marginPx) ?? false;
+  }
+
+  private isAnyPanelNearViewport(panelIds: string[], marginPx = 400): boolean {
+    return panelIds.some((panelId) => this.isPanelNearViewport(panelId, marginPx));
   }
 
   async loadAllData(): Promise<void> {
@@ -344,39 +353,57 @@ export class DataLoaderManager implements AppModule {
 
     // Happy variant only loads news data -- skip all geopolitical/financial/military data
     if (SITE_VARIANT !== 'happy') {
-      tasks.push({ name: 'markets', task: runGuarded('markets', () => this.loadMarkets()) });
-      if (SITE_VARIANT === 'finance' && getSecretState('WORLDMONITOR_API_KEY').present) {
+      if (this.isAnyPanelNearViewport(['markets', 'heatmap', 'commodities', 'crypto'])) {
+        tasks.push({ name: 'markets', task: runGuarded('markets', () => this.loadMarkets()) });
+      }
+      if (SITE_VARIANT === 'finance' && getSecretState('WORLDMONITOR_API_KEY').present && this.isPanelNearViewport('stock-analysis')) {
         tasks.push({ name: 'stockAnalysis', task: runGuarded('stockAnalysis', () => this.loadStockAnalysis()) });
+      }
+      if (SITE_VARIANT === 'finance' && getSecretState('WORLDMONITOR_API_KEY').present && this.isPanelNearViewport('stock-backtest')) {
         tasks.push({ name: 'stockBacktest', task: runGuarded('stockBacktest', () => this.loadStockBacktest()) });
       }
-      tasks.push({ name: 'predictions', task: runGuarded('predictions', () => this.loadPredictions()) });
+      if (this.isPanelNearViewport('polymarket')) {
+        tasks.push({ name: 'predictions', task: runGuarded('predictions', () => this.loadPredictions()) });
+      }
       tasks.push({ name: 'pizzint', task: runGuarded('pizzint', () => this.loadPizzInt()) });
-      tasks.push({ name: 'fred', task: runGuarded('fred', () => this.loadFredData()) });
-      tasks.push({ name: 'oil', task: runGuarded('oil', () => this.loadOilAnalytics()) });
-      tasks.push({ name: 'spending', task: runGuarded('spending', () => this.loadGovernmentSpending()) });
-      tasks.push({ name: 'bis', task: runGuarded('bis', () => this.loadBisData()) });
+      if (this.isPanelNearViewport('economic')) {
+        tasks.push({ name: 'fred', task: runGuarded('fred', () => this.loadFredData()) });
+        tasks.push({ name: 'oil', task: runGuarded('oil', () => this.loadOilAnalytics()) });
+        tasks.push({ name: 'spending', task: runGuarded('spending', () => this.loadGovernmentSpending()) });
+        tasks.push({ name: 'bis', task: runGuarded('bis', () => this.loadBisData()) });
+      }
 
       // Trade policy data (FULL and FINANCE only)
       if (SITE_VARIANT === 'full' || SITE_VARIANT === 'finance' || SITE_VARIANT === 'commodity') {
-        tasks.push({ name: 'tradePolicy', task: runGuarded('tradePolicy', () => this.loadTradePolicy()) });
-        tasks.push({ name: 'supplyChain', task: runGuarded('supplyChain', () => this.loadSupplyChain()) });
+        if (this.isPanelNearViewport('trade-policy')) {
+          tasks.push({ name: 'tradePolicy', task: runGuarded('tradePolicy', () => this.loadTradePolicy()) });
+        }
+        if (this.isPanelNearViewport('supply-chain')) {
+          tasks.push({ name: 'supplyChain', task: runGuarded('supplyChain', () => this.loadSupplyChain()) });
+        }
       }
     }
 
     // Progress charts data (happy variant only)
     if (SITE_VARIANT === 'happy') {
-      tasks.push({
-        name: 'progress',
-        task: runGuarded('progress', () => this.loadProgressData()),
-      });
-      tasks.push({
-        name: 'species',
-        task: runGuarded('species', () => this.loadSpeciesData()),
-      });
-      tasks.push({
-        name: 'renewable',
-        task: runGuarded('renewable', () => this.loadRenewableData()),
-      });
+      if (this.isPanelNearViewport('progress')) {
+        tasks.push({
+          name: 'progress',
+          task: runGuarded('progress', () => this.loadProgressData()),
+        });
+      }
+      if (this.isPanelNearViewport('species')) {
+        tasks.push({
+          name: 'species',
+          task: runGuarded('species', () => this.loadSpeciesData()),
+        });
+      }
+      if (this.isPanelNearViewport('renewable')) {
+        tasks.push({
+          name: 'renewable',
+          task: runGuarded('renewable', () => this.loadRenewableData()),
+        });
+      }
       tasks.push({
         name: 'happinessMap',
         task: runGuarded('happinessMap', async () => {
@@ -1223,11 +1250,7 @@ export class DataLoaderManager implements AppModule {
           }
         }
 
-        for (let attempt = 0; attempt < 3 && !commoditiesLoaded; attempt++) {
-          if (attempt > 0) {
-            commoditiesPanel.showRetrying();
-            await new Promise(r => setTimeout(r, 20_000));
-          }
+        for (let attempt = 0; attempt < 1 && !commoditiesLoaded; attempt++) {
           const commoditiesResult = await fetchMultipleStocks(COMMODITIES, {
             onBatch: (partial) => commoditiesPanel.renderCommodities(partial.map(mapCommodity)),
             useCommodityBreaker: true,
@@ -1248,12 +1271,7 @@ export class DataLoaderManager implements AppModule {
 
     try {
       const cryptoPanel = this.ctx.panels['crypto'] as CryptoPanel | undefined;
-      let crypto = await fetchCrypto();
-      if (crypto.length === 0) {
-        cryptoPanel?.showRetrying();
-        await new Promise(r => setTimeout(r, 20_000));
-        crypto = await fetchCrypto();
-      }
+      const crypto = await fetchCrypto();
       cryptoPanel?.renderCrypto(crypto);
       this.ctx.statusPanel?.updateApi('CoinGecko', { status: crypto.length > 0 ? 'ok' : 'error' });
     } catch {
@@ -2114,17 +2132,8 @@ export class DataLoaderManager implements AppModule {
           this.ctx.statusPanel?.updateApi('FRED', { status: 'error' });
           return;
         }
-        economicPanel?.showRetrying();
-        await new Promise(r => setTimeout(r, 20_000));
-        const retryData = await fetchFredData();
-        if (retryData.length === 0) {
-          economicPanel?.showError();
-          this.ctx.statusPanel?.updateApi('FRED', { status: 'error' });
-          return;
-        }
-        economicPanel?.update(retryData);
-        this.ctx.statusPanel?.updateApi('FRED', { status: 'ok' });
-        dataFreshness.recordUpdate('economic', retryData.length);
+        economicPanel?.showError(t('common.upstreamUnavailable'));
+        this.ctx.statusPanel?.updateApi('FRED', { status: 'error' });
         return;
       }
 
@@ -2132,19 +2141,6 @@ export class DataLoaderManager implements AppModule {
       this.ctx.statusPanel?.updateApi('FRED', { status: 'ok' });
       dataFreshness.recordUpdate('economic', data.length);
     } catch {
-      if (isFeatureAvailable('economicFred')) {
-        economicPanel?.showRetrying();
-        try {
-          await new Promise(r => setTimeout(r, 20_000));
-          const retryData = await fetchFredData();
-          if (retryData.length > 0) {
-            economicPanel?.update(retryData);
-            this.ctx.statusPanel?.updateApi('FRED', { status: 'ok' });
-            dataFreshness.recordUpdate('economic', retryData.length);
-            return;
-          }
-        } catch { /* fall through */ }
-      }
       this.ctx.statusPanel?.updateApi('FRED', { status: 'error' });
       economicPanel?.showError();
       economicPanel?.setLoading(false);
