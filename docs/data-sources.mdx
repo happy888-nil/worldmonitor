@@ -256,16 +256,7 @@ Crisis badges flag countries with extreme displacement: > 1 million displaced (r
 
 ### Population Exposure Estimation
 
-Active events (conflicts, earthquakes, floods, wildfires) are cross-referenced against WorldPop population density data to estimate the number of civilians within the impact zone. Event-specific radii reflect typical impact footprints:
-
-| Event Type      | Radius | Rationale                                |
-| --------------- | ------ | ---------------------------------------- |
-| **Conflicts**   | 50 km  | Direct combat zone + displacement buffer |
-| **Earthquakes** | 100 km | Shaking intensity propagation            |
-| **Floods**      | 100 km | Watershed and drainage basin extent      |
-| **Wildfires**   | 30 km  | Smoke and evacuation perimeter           |
-
-API calls to WorldPop are batched concurrently (max 10 parallel requests) to handle multiple simultaneous events without sequential bottlenecks. The Population Exposure panel displays a summary header with total affected population and a per-event breakdown table.
+Population exposure estimation calculates affected populations within event-specific radii. See [Algorithms - Population Exposure](/algorithms#population-exposure-estimation) for the full methodology.
 
 ---
 
