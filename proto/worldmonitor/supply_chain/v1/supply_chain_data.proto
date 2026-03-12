@@ -30,6 +30,9 @@ message ChokepointInfo {
   repeated string affected_routes = 9;
   string description = 10;
   int32 ais_disruptions = 11;
+  // Directional flow labels tracked at this chokepoint (e.g. "eastbound", "westbound").
+  // Aligns with S&P Global Market Intelligence tanker DWT departure data.
+  repeated string directions = 12;
 }
 
 message MineralProducer {

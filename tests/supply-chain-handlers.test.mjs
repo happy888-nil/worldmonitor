@@ -154,6 +154,30 @@ describe('Chokepoint assignment', () => {
       'bab_el_mandeb',
     );
   });
+
+  it('matches Cape of Good Hope by name', () => {
+    assert.equal(
+      resolveChokepointId({ text: 'Tanker rerouted via Cape of Good Hope due to Red Sea crisis' }),
+      'cape_of_good_hope',
+    );
+  });
+
+  it('matches Strait of Gibraltar by name', () => {
+    assert.equal(
+      resolveChokepointId({ text: 'Vessel transit delayed at Strait of Gibraltar' }),
+      'gibraltar',
+    );
+  });
+
+  it('uses nearest location for Cape of Good Hope', () => {
+    assert.equal(
+      resolveChokepointId({
+        text: '',
+        location: { latitude: -34.4, longitude: 18.5 }, // near Cape Town
+      }),
+      'cape_of_good_hope',
+    );
+  });
 });
 
 describe('Threat config freshness', () => {

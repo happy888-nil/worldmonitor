@@ -1,14 +1,16 @@
 /**
- * Tests for supply-chain v2 changes:
+ * Tests for supply-chain v2/v3 changes:
  *
- * - Proto: ais_disruptions field added to ChokepointInfo
- * - Cache keys bumped to v2 for chokepoints & minerals
+ * - Proto: ais_disruptions field added to ChokepointInfo (v2)
+ * - Proto: directions field added to ChokepointInfo (v3)
+ * - Cache keys bumped to v3 for chokepoints
+ * - Chokepoint handler: Cape of Good Hope + Gibraltar added, directions field (v3)
  * - Chokepoint handler: description format, aisDisruptions output, rename, TTL
  * - Minerals handler: top-3 producers, Nickel/Copper removed, v2 cache
  * - Shipping handler: updated series names
  * - Gateway: new 'daily' cache tier, minerals moved to daily
  * - Service client: circuit breaker TTLs aligned
- * - SupplyChainPanel: unavailable banner logic, AIS disruption display
+ * - SupplyChainPanel: unavailable banner logic, AIS disruption display, directions display
  * - Locale: tab labels updated
  */
 
@@ -47,6 +49,11 @@ describe('ChokepointInfo proto has ais_disruptions field', () => {
     assert.match(proto, /repeated string affected_routes\s*=\s*9/);
     assert.match(proto, /string description\s*=\s*10/);
   });
+
+  it('declares directions as repeated string at field 12', () => {
+    assert.match(proto, /repeated\s+string\s+directions\s*=\s*12/,
+      'directions field should be repeated string at field number 12');
+  });
 });
 
 // ========================================================================
@@ -65,6 +72,16 @@ describe('Generated types include aisDisruptions', () => {
   it('server ChokepointInfo has aisDisruptions: number', () => {
     assert.match(serverSrc, /aisDisruptions:\s*number/,
       'Server type must include aisDisruptions field');
+  });
+
+  it('client ChokepointInfo has directions: string[]', () => {
+    assert.match(clientSrc, /directions:\s*string\[\]/,
+      'Client type must include directions field');
+  });
+
+  it('server ChokepointInfo has directions: string[]', () => {
+    assert.match(serverSrc, /directions:\s*string\[\]/,
+      'Server type must include directions field');
   });
 });
 
@@ -88,6 +105,18 @@ describe('OpenAPI spec includes aisDisruptions', () => {
     assert.match(yamlSpec, /aisDisruptions:/, 'aisDisruptions missing from YAML spec');
     assert.match(yamlSpec, /aisDisruptions:\s*\n\s*type:\s*integer/, 'YAML aisDisruptions should be type integer');
   });
+
+  it('JSON spec has directions property on ChokepointInfo', () => {
+    const parsed = JSON.parse(jsonSpec);
+    const cpSchema = parsed.components.schemas.ChokepointInfo;
+    assert.ok(cpSchema.properties.directions, 'directions missing from JSON spec');
+    assert.equal(cpSchema.properties.directions.type, 'array');
+    assert.equal(cpSchema.properties.directions.items.type, 'string');
+  });
+
+  it('YAML spec has directions property', () => {
+    assert.match(yamlSpec, /directions:/, 'directions missing from YAML spec');
+  });
 });
 
 // ========================================================================
@@ -101,7 +130,7 @@ describe('Cache keys bumped to v2', () => {
   const mineralsSrc = readSrc('server/worldmonitor/supply-chain/v1/get-critical-minerals.ts');
 
   it('bootstrap.js chokepoints key is v2', () => {
-    assert.match(bootstrapSrc, /chokepoints:\s*'supply_chain:chokepoints:v2'/);
+    assert.match(bootstrapSrc, /chokepoints:\s*'supply_chain:chokepoints:v3'/);
   });
 
   it('bootstrap.js minerals key is v2', () => {
@@ -109,7 +138,7 @@ describe('Cache keys bumped to v2', () => {
   });
 
   it('cache-keys.ts chokepoints key is v2', () => {
-    assert.match(cacheKeysSrc, /chokepoints:\s*'supply_chain:chokepoints:v2'/);
+    assert.match(cacheKeysSrc, /chokepoints:\s*'supply_chain:chokepoints:v3'/);
   });
 
   it('cache-keys.ts minerals key is v2', () => {
@@ -117,7 +146,7 @@ describe('Cache keys bumped to v2', () => {
   });
 
   it('chokepoint handler uses v2 redis key', () => {
-    assert.match(chokepointSrc, /REDIS_CACHE_KEY\s*=\s*'supply_chain:chokepoints:v2'/);
+    assert.match(chokepointSrc, /REDIS_CACHE_KEY\s*=\s*'supply_chain:chokepoints:v3'/);
   });
 
   it('minerals handler uses v2 redis key', () => {
@@ -169,13 +198,20 @@ describe('Chokepoint handler v2 changes', () => {
       'Old vague description removed');
   });
 
-  it('includes all 6 chokepoints (Suez, Malacca, Hormuz, Bab el-Mandeb, Panama, Taiwan)', () => {
+  it('includes all 8 chokepoints (Suez, Malacca, Hormuz, Bab el-Mandeb, Panama, Taiwan, Cape of Good Hope, Gibraltar)', () => {
     assert.match(src, /id:\s*'suez'/);
     assert.match(src, /id:\s*'malacca'/);
     assert.match(src, /id:\s*'hormuz'/);
     assert.match(src, /id:\s*'bab_el_mandeb'/);
     assert.match(src, /id:\s*'panama'/);
     assert.match(src, /id:\s*'taiwan'/);
+    assert.match(src, /id:\s*'cape_of_good_hope'/);
+    assert.match(src, /id:\s*'gibraltar'/);
+  });
+
+  it('emits directions array in the response object', () => {
+    assert.match(src, /directions:\s*cp\.directions/,
+      'Should set directions from cp.directions');
   });
 });
 
@@ -321,6 +357,11 @@ describe('SupplyChainPanel v2 changes', () => {
   it('has fallback for aisDisruptions when absent (v1 cache compat)', () => {
     assert.match(src, /cp\.aisDisruptions\s*\?\?\s*\(/,
       'Should have nullish coalescing fallback for aisDisruptions');
+  });
+
+  it('displays directions when present', () => {
+    assert.match(src, /cp\.directions/,
+      'Should reference cp.directions in the chokepoint card');
   });
 });
 
@@ -532,14 +573,16 @@ import { CHOKEPOINTS, THREAT_CONFIG_LAST_REVIEWED } from '../server/worldmonitor
 const cpById = Object.fromEntries(CHOKEPOINTS.map(cp => [cp.id, cp]));
 
 describe('Chokepoint threat level config', () => {
-  it('exports all 6 chokepoints', () => {
-    assert.equal(CHOKEPOINTS.length, 6);
+  it('exports all 8 chokepoints', () => {
+    assert.equal(CHOKEPOINTS.length, 8);
     assert.ok(cpById.suez);
     assert.ok(cpById.malacca);
     assert.ok(cpById.hormuz);
     assert.ok(cpById.bab_el_mandeb);
     assert.ok(cpById.panama);
     assert.ok(cpById.taiwan);
+    assert.ok(cpById.cape_of_good_hope);
+    assert.ok(cpById.gibraltar);
   });
 
   it('every entry has required fields', () => {
@@ -571,9 +614,11 @@ describe('Chokepoint threat level config', () => {
     assert.equal(cpById.taiwan.threatLevel, 'elevated');
   });
 
-  it('Malacca and Panama use normal threat level', () => {
+  it('Malacca, Panama, Cape of Good Hope, and Gibraltar use normal threat level', () => {
     assert.equal(cpById.malacca.threatLevel, 'normal');
     assert.equal(cpById.panama.threatLevel, 'normal');
+    assert.equal(cpById.cape_of_good_hope.threatLevel, 'normal');
+    assert.equal(cpById.gibraltar.threatLevel, 'normal');
   });
 
   it('Hormuz threatDescription mentions Iran-Israel war', () => {
@@ -584,9 +629,11 @@ describe('Chokepoint threat level config', () => {
     assert.ok(cpById.bab_el_mandeb.threatDescription.includes('Houthi'));
   });
 
-  it('Malacca and Panama have empty threatDescription', () => {
+  it('Malacca, Panama, Cape of Good Hope, and Gibraltar have empty threatDescription', () => {
     assert.equal(cpById.malacca.threatDescription, '');
     assert.equal(cpById.panama.threatDescription, '');
+    assert.equal(cpById.cape_of_good_hope.threatDescription, '');
+    assert.equal(cpById.gibraltar.threatDescription, '');
   });
 
   it('Hormuz areaKeywords include gulf of oman and strait of hormuz', () => {
@@ -612,5 +659,40 @@ describe('Chokepoint threat level config', () => {
     assert.ok(THREAT_CONFIG_LAST_REVIEWED, 'THREAT_CONFIG_LAST_REVIEWED should be exported');
     assert.ok(!isNaN(Date.parse(THREAT_CONFIG_LAST_REVIEWED)),
       'THREAT_CONFIG_LAST_REVIEWED should be a valid date');
+  });
+
+  it('every chokepoint has a directions array', () => {
+    for (const cp of CHOKEPOINTS) {
+      assert.ok(Array.isArray(cp.directions), `${cp.id}: directions must be an array`);
+      assert.ok(cp.directions.length >= 2, `${cp.id}: must have at least 2 directions`);
+    }
+  });
+
+  it('Hormuz and Gibraltar use eastbound/westbound', () => {
+    assert.deepEqual(cpById.hormuz.directions, ['eastbound', 'westbound']);
+    assert.deepEqual(cpById.gibraltar.directions, ['eastbound', 'westbound']);
+  });
+
+  it('Cape of Good Hope uses eastbound/westbound', () => {
+    assert.deepEqual(cpById.cape_of_good_hope.directions, ['eastbound', 'westbound']);
+  });
+
+  it('Suez and Panama use northbound/southbound', () => {
+    assert.deepEqual(cpById.suez.directions, ['northbound', 'southbound']);
+    assert.deepEqual(cpById.panama.directions, ['northbound', 'southbound']);
+  });
+
+  it('Malacca uses northbound/southbound', () => {
+    assert.deepEqual(cpById.malacca.directions, ['northbound', 'southbound']);
+  });
+
+  it('Cape of Good Hope areaKeywords include cape town and south africa', () => {
+    assert.ok(cpById.cape_of_good_hope.areaKeywords.includes('cape town'));
+    assert.ok(cpById.cape_of_good_hope.areaKeywords.includes('south africa'));
+  });
+
+  it('Gibraltar areaKeywords include mediterranean and algeciras', () => {
+    assert.ok(cpById.gibraltar.areaKeywords.includes('mediterranean'));
+    assert.ok(cpById.gibraltar.areaKeywords.includes('algeciras'));
   });
 });

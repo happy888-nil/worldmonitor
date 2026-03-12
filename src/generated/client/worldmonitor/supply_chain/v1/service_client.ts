@@ -48,6 +48,7 @@ export interface ChokepointInfo {
   affectedRoutes: string[];
   description: string;
   aisDisruptions: number;
+  directions: string[];
 }
 
 export interface GetCriticalMineralsRequest {

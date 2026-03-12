@@ -13,7 +13,7 @@ export const BOOTSTRAP_CACHE_KEYS: Record<string, string> = {
   bisExchange:      'economic:bis:eer:v1',
   bisCredit:        'economic:bis:credit:v1',
   shippingRates:    'supply_chain:shipping:v2',
-  chokepoints:      'supply_chain:chokepoints:v2',
+  chokepoints:      'supply_chain:chokepoints:v3',
   minerals:         'supply_chain:minerals:v2',
   giving:           'giving:summary:v1',
   climateAnomalies: 'climate:anomalies:v1',

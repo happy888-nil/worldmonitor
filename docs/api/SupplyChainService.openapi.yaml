@@ -201,6 +201,10 @@ components:
                 aisDisruptions:
                     type: integer
                     format: int32
+                directions:
+                    type: array
+                    items:
+                        type: string
         GetCriticalMineralsRequest:
             type: object
         GetCriticalMineralsResponse:

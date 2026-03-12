@@ -107,7 +107,7 @@ export class SupplyChainPanel extends Panel {
             <span class="trade-status ${statusClass}">${escapeHtml(cp.status)}</span>
           </div>
           <div class="trade-restriction-body">
-            <div class="trade-sector">${cp.activeWarnings} ${t('components.supplyChain.warnings')} · ${aisDisruptions} ${t('components.supplyChain.aisDisruptions')}</div>
+            <div class="trade-sector">${cp.activeWarnings} ${t('components.supplyChain.warnings')} · ${aisDisruptions} ${t('components.supplyChain.aisDisruptions')}${cp.directions?.length ? ` · ${escapeHtml(cp.directions.join('/'))}` : ''}</div>
             <div class="trade-description">${escapeHtml(cp.description)}</div>
             <div class="trade-affected">${escapeHtml(cp.affectedRoutes.join(', '))}</div>
           </div>
