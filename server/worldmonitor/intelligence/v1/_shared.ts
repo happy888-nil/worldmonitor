@@ -2,6 +2,8 @@
  * Shared constants, types, and helpers used by multiple intelligence RPCs.
  */
 
+import { hashString, sha256Hex } from '../../../_shared/hash';
+
 // ========================================================================
 // Constants
 // ========================================================================
@@ -27,7 +29,7 @@ export const TIER1_COUNTRIES: Record<string, string> = {
 // Helpers
 // ========================================================================
 
-export { hashString, sha256Hex } from '../../../_shared/hash';
+export { hashString, sha256Hex };
 
 export async function buildClassifyCacheKey(title: string): Promise<string> {
   return `${CLASSIFY_CACHE_PREFIX}${(await sha256Hex(title.toLowerCase())).slice(0, 16)}`;
