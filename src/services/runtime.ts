@@ -57,14 +57,6 @@ type RuntimeProbe = {
 
 export function detectDesktopRuntime(probe: RuntimeProbe): boolean {
   const tauriInUserAgent = probe.userAgent.includes('Tauri');
-  const secureLocalhostOrigin = (
-    probe.locationProtocol === 'https:' && (
-      probe.locationHost === 'localhost' ||
-      probe.locationHost.startsWith('localhost:') ||
-      probe.locationHost === '127.0.0.1' ||
-      probe.locationHost.startsWith('127.0.0.1:')
-    )
-  );
 
   // Tauri production windows can expose tauri-like hosts/schemes without
   // always exposing bridge globals at first paint.
@@ -73,8 +65,7 @@ export function detectDesktopRuntime(probe: RuntimeProbe): boolean {
     probe.locationProtocol === 'asset:' ||
     probe.locationHost === 'tauri.localhost' ||
     probe.locationHost.endsWith('.tauri.localhost') ||
-    probe.locationOrigin.startsWith('tauri://') ||
-    secureLocalhostOrigin
+    probe.locationOrigin.startsWith('tauri://')
   );
 
   return probe.hasTauriGlobals || tauriInUserAgent || tauriLikeLocation;
