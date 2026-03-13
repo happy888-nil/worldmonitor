@@ -109,14 +109,52 @@ export interface PreciseCoordinates {
   lon: number;
 }
 
+const SESSION_KEY_COORDS = 'wm-geo-coords';
+const SESSION_KEY_REGION = 'wm-geo-region';
+
+function getCachedCoords(): PreciseCoordinates | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY_COORDS);
+    if (!raw) return null;
+    const { lat, lon } = JSON.parse(raw);
+    if (typeof lat === 'number' && typeof lon === 'number') return { lat, lon };
+  } catch { /* ignore */ }
+  return null;
+}
+
+function cacheCoords(coords: PreciseCoordinates): void {
+  try { sessionStorage.setItem(SESSION_KEY_COORDS, JSON.stringify(coords)); } catch { /* ignore */ }
+}
+
+function getCachedRegion(): MapView | null {
+  try {
+    const v = sessionStorage.getItem(SESSION_KEY_REGION);
+    if (v) return v as MapView;
+  } catch { /* ignore */ }
+  return null;
+}
+
+function cacheRegion(region: MapView): void {
+  try { sessionStorage.setItem(SESSION_KEY_REGION, region); } catch { /* ignore */ }
+}
+
 export function resolvePreciseUserCoordinates(timeout = 5000): Promise<PreciseCoordinates | null> {
   if (typeof navigator === 'undefined' || !navigator.geolocation) return Promise.resolve(null);
+  const cached = getCachedCoords();
+  if (cached) return Promise.resolve(cached);
   return getGeolocationPosition(timeout)
-    .then(pos => ({ lat: pos.coords.latitude, lon: pos.coords.longitude }))
+    .then(pos => {
+      const coords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+      cacheCoords(coords);
+      return coords;
+    })
     .catch(() => null);
 }
 
 export async function resolveUserRegion(): Promise<MapView> {
+  const cached = getCachedRegion();
+  if (cached) return cached;
+
   let tzRegion: MapView = 'global';
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -130,11 +168,14 @@ export async function resolveUserRegion(): Promise<MapView> {
     const status = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
     if (status.state === 'granted') {
       const pos = await getGeolocationPosition(3000);
-      return coordsToRegion(pos.coords.latitude, pos.coords.longitude);
+      const region = coordsToRegion(pos.coords.latitude, pos.coords.longitude);
+      cacheRegion(region);
+      return region;
     }
   } catch {
     // permissions.query unsupported or geolocation failed
   }
 
+  cacheRegion(tzRegion);
   return tzRegion;
 }
