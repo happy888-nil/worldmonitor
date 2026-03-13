@@ -155,6 +155,15 @@ export async function resolveUserRegion(): Promise<MapView> {
   const cached = getCachedRegion();
   if (cached) return cached;
 
+  // If precise coords already resolved (parallel call or prior page),
+  // derive region from them instead of the coarser timezone fallback.
+  const cachedPos = getCachedCoords();
+  if (cachedPos) {
+    const region = coordsToRegion(cachedPos.lat, cachedPos.lon);
+    cacheRegion(region);
+    return region;
+  }
+
   let tzRegion: MapView = 'global';
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -176,6 +185,7 @@ export async function resolveUserRegion(): Promise<MapView> {
     // permissions.query unsupported or geolocation failed
   }
 
-  cacheRegion(tzRegion);
+  // Don't cache timezone fallback: subsequent variant switches should
+  // retry geolocation in case the user has since granted permission.
   return tzRegion;
 }
