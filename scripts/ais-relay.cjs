@@ -3623,6 +3623,10 @@ const PORTWATCH_CHOKEPOINT_NAMES = [
   { name: 'Cape of Good Hope', id: 'cape_of_good_hope' },
   { name: 'Gibraltar Strait', id: 'gibraltar' },
   { name: 'Bosporus Strait', id: 'bosphorus' },
+  { name: 'Korea Strait', id: 'korea_strait' },
+  { name: 'Dover Strait', id: 'dover_strait' },
+  { name: 'Kerch Strait', id: 'kerch_strait' },
+  { name: 'Lombok Strait', id: 'lombok_strait' },
 ];
 let portwatchSeedInFlight = false;
 
@@ -4098,6 +4102,10 @@ const CHOKEPOINTS = [
   { name: 'Strait of Gibraltar', lat: 35.96, lon: -5.35, radius: 1 },
   { name: 'Bosphorus Strait', lat: 41.12, lon: 29.05, radius: 0.5 },
   { name: 'Dardanelles', lat: 40.20, lon: 26.40, radius: 0.5 },
+  { name: 'Korea Strait', lat: 34.0, lon: 129.0, radius: 1.5 },
+  { name: 'Dover Strait', lat: 51.05, lon: 1.45, radius: 0.5 },
+  { name: 'Kerch Strait', lat: 45.33, lon: 36.60, radius: 0.5 },
+  { name: 'Lombok Strait', lat: -8.47, lon: 115.72, radius: 0.5 },
 ];
 
 function classifyVesselType(shipType) {

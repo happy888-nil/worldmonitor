@@ -16,6 +16,10 @@ export const CANONICAL_CHOKEPOINTS: readonly CanonicalChokepoint[] = [
   { id: 'gibraltar', relayName: 'Strait of Gibraltar', portwatchName: 'Strait of Gibraltar', corridorRiskName: null },
   { id: 'bosphorus', relayName: 'Bosphorus Strait', portwatchName: 'Bosphorus', corridorRiskName: null },
   { id: 'dardanelles', relayName: 'Dardanelles', portwatchName: 'Dardanelles', corridorRiskName: null },
+  { id: 'korea_strait', relayName: 'Korea Strait', portwatchName: 'Korea Strait', corridorRiskName: null },
+  { id: 'dover_strait', relayName: 'Dover Strait', portwatchName: 'Dover Strait', corridorRiskName: null },
+  { id: 'kerch_strait', relayName: 'Kerch Strait', portwatchName: 'Kerch Strait', corridorRiskName: null },
+  { id: 'lombok_strait', relayName: 'Lombok Strait', portwatchName: 'Lombok Strait', corridorRiskName: null },
 ];
 
 export function relayNameToId(relayName: string): string | undefined {

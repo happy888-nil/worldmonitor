@@ -8,8 +8,8 @@ import {
 } from '../server/worldmonitor/supply-chain/v1/_chokepoint-ids.ts';
 
 describe('CANONICAL_CHOKEPOINTS registry', () => {
-  it('contains exactly 10 canonical chokepoints', () => {
-    assert.equal(CANONICAL_CHOKEPOINTS.length, 10);
+  it('contains exactly 14 canonical chokepoints', () => {
+    assert.equal(CANONICAL_CHOKEPOINTS.length, 14);
   });
 
   it('has no duplicate IDs', () => {
