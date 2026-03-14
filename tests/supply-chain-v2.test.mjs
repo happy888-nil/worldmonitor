@@ -233,7 +233,7 @@ describe('Chokepoint handler v2 changes', () => {
       'Old vague description removed');
   });
 
-  it('includes all 14 chokepoints', () => {
+  it('includes all 13 chokepoints', () => {
     assert.match(src, /id:\s*'suez'/);
     assert.match(src, /id:\s*'malacca_strait'/);
     assert.match(src, /id:\s*'hormuz_strait'/);
@@ -243,7 +243,6 @@ describe('Chokepoint handler v2 changes', () => {
     assert.match(src, /id:\s*'cape_of_good_hope'/);
     assert.match(src, /id:\s*'gibraltar'/);
     assert.match(src, /id:\s*'bosphorus'/);
-    assert.match(src, /id:\s*'dardanelles'/);
     assert.match(src, /id:\s*'korea_strait'/);
     assert.match(src, /id:\s*'dover_strait'/);
     assert.match(src, /id:\s*'kerch_strait'/);
@@ -604,8 +603,8 @@ import { CHOKEPOINTS, THREAT_CONFIG_LAST_REVIEWED } from '../server/worldmonitor
 const cpById = Object.fromEntries(CHOKEPOINTS.map(cp => [cp.id, cp]));
 
 describe('Chokepoint threat level config', () => {
-  it('exports all 14 chokepoints', () => {
-    assert.equal(CHOKEPOINTS.length, 14);
+  it('exports all 13 chokepoints', () => {
+    assert.equal(CHOKEPOINTS.length, 13);
     assert.ok(cpById.suez);
     assert.ok(cpById.malacca_strait);
     assert.ok(cpById.hormuz_strait);
@@ -619,7 +618,6 @@ describe('Chokepoint threat level config', () => {
     assert.ok(cpById.cape_of_good_hope);
     assert.ok(cpById.gibraltar);
     assert.ok(cpById.bosphorus);
-    assert.ok(cpById.dardanelles);
   });
 
   it('every entry has required fields', () => {

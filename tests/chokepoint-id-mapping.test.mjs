@@ -8,8 +8,8 @@ import {
 } from '../server/worldmonitor/supply-chain/v1/_chokepoint-ids.ts';
 
 describe('CANONICAL_CHOKEPOINTS registry', () => {
-  it('contains exactly 14 canonical chokepoints', () => {
-    assert.equal(CANONICAL_CHOKEPOINTS.length, 14);
+  it('contains exactly 13 canonical chokepoints', () => {
+    assert.equal(CANONICAL_CHOKEPOINTS.length, 13);
   });
 
   it('has no duplicate IDs', () => {
@@ -27,9 +27,9 @@ describe('CANONICAL_CHOKEPOINTS registry', () => {
     assert.equal(new Set(names).size, names.length);
   });
 
-  it('Dardanelles has empty portwatchName (not in PortWatch dataset)', () => {
-    const dar = CANONICAL_CHOKEPOINTS.find(c => c.id === 'dardanelles');
-    assert.equal(dar.portwatchName, '');
+  it('Bosphorus (Turkish Straits) has relayName "Turkish Straits"', () => {
+    const bos = CANONICAL_CHOKEPOINTS.find(c => c.id === 'bosphorus');
+    assert.equal(bos.relayName, 'Turkish Straits');
   });
 });
 
@@ -86,10 +86,5 @@ describe('corridorRiskNameToId', () => {
   it('Bosphorus has null corridorRiskName', () => {
     const bos = CANONICAL_CHOKEPOINTS.find(c => c.id === 'bosphorus');
     assert.equal(bos.corridorRiskName, null);
-  });
-
-  it('Dardanelles has null corridorRiskName', () => {
-    const dar = CANONICAL_CHOKEPOINTS.find(c => c.id === 'dardanelles');
-    assert.equal(dar.corridorRiskName, null);
   });
 });
